@@ -1,5 +1,1 @@
-=IF(ISNUMBER(FIND("m",D2)),
-    LEFT(D2,FIND("m",D2)-1)*60 + MID(D2,FIND("m",D2)+2,LEN(D2)-FIND("m",D2)-1),
-    LEFT(D2,FIND("s",D2)-1)
-)
-
+POST https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/queryPipelineRuns?api-version=2018-06-01
