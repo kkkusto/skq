@@ -1,0 +1,1 @@
+=LEFT(D2,FIND("m",D2)-1)*60 + MID(D2,FIND("m",D2)+1,FIND("s",D2)-FIND("m",D2)-1)
