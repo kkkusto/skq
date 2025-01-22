@@ -1,12 +1,5 @@
-(duration as text) as nullable number =>
 let
-    Parts = Text.Split(duration, ":"),
-    Minutes = 
-        if List.Count(Parts) = 3 then 
-            Number.FromText(Parts{0}) * 60 + Number.FromText(Parts{1}) + Number.FromText(Parts{2}) / 60
-        else if List.Count(Parts) = 2 then 
-            Number.FromText(Parts{0}) + Number.FromText(Parts{1}) / 60
-        else 
-            null
+    PreviousStep = <LastStepName>,
+    RemoveEmptyColumns = Table.SelectColumns(PreviousStep, List.Select(Table.ColumnNames(PreviousStep), (col) => List.NonNullCount(Table.Column(PreviousStep, col)) > 0))
 in
-    Minutes
+    RemoveEmptyColumns
