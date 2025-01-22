@@ -31,8 +31,10 @@ def add_duration_in_mins(df, duration_col='Duration'):
 
 # Directory containing the files
 input_folder = 'path_to_your_folder'
-output_folder = 'path_to_output_folder'
-os.makedirs(output_folder, exist_ok=True)
+output_file = 'combined_modified_file.csv'
+
+# List to store all processed DataFrames
+all_dfs = []
 
 # Iterate over all files in the input folder
 for file_name in os.listdir(input_folder):
@@ -46,11 +48,22 @@ for file_name in os.listdir(input_folder):
             # Apply the duration conversion function
             df_modified = add_duration_in_mins(df, duration_col='Duration')
             
-            # Generate the new file name and save the modified DataFrame
-            modified_file_name = f"{os.path.splitext(file_name)[0]}_modified_30.csv"
-            output_path = os.path.join(output_folder, modified_file_name)
-            df_modified.to_csv(output_path, index=False)
+            # Add a column to track the original file name
+            df_modified['source_file'] = file_name
             
-            print(f"Processed and saved: {output_path}")
+            # Append the modified DataFrame to the list
+            all_dfs.append(df_modified)
+            
+            print(f"Processed: {file_name}")
         except Exception as e:
             print(f"Error processing {file_name}: {e}")
+
+# Combine all DataFrames into a single DataFrame
+if all_dfs:
+    combined_df = pd.concat(all_dfs, ignore_index=True)
+    
+    # Save the combined DataFrame to a single file
+    combined_df.to_csv(output_file, index=False)
+    print(f"Combined file saved as: {output_file}")
+else:
+    print("No valid files were processed.")
