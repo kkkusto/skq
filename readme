@@ -1,1 +1,333 @@
-POST https://management.azure.com/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/queryPipelineRuns?api-version=2018-06-01
+import pandas as pd
+
+def add_duration_in_mins(df, duration_col='Duration'):
+    """
+    Adds a new column 'duration_in_mins' to the DataFrame, converting time duration into minutes.
+    
+    Parameters:
+    - df (pd.DataFrame): Input DataFrame containing the duration column.
+    - duration_col (str): Name of the column with duration in 'HH:MM:SS' format.
+    
+    Returns:
+    - pd.DataFrame: DataFrame with the new column 'duration_in_mins'.
+    """
+    def convert_to_minutes(duration):
+        # Handle edge cases for missing or malformed data
+        if not isinstance(duration, str):
+            return None
+        parts = duration.split(':')
+        if len(parts) == 3:  # HH:MM:SS
+            hours, minutes, seconds = map(int, parts)
+            return hours * 60 + minutes + seconds / 60
+        elif len(parts) == 2:  # MM:SS
+            minutes, seconds = map(int, parts)
+            return minutes + seconds / 60
+        return None  # Return None for invalid formats
+
+    df['duration_in_mins'] = df[duration_col].apply(convert_to_minutes)
+    return df
+# Apply the function to your DataFrame
+df_cleaned_fixed = add_duration_in_mins(df_cleaned_fixed, duration_col='Duration')
+
+# Display the updated DataFrame
+df_cleaned_fixed.head()
+
+
+# Save histogram as an image
+plt.figure(figsize=(10, 6))
+plt.hist(df_cleaned_fixed['duration_in_mins'], bins=10, edgecolor='k', alpha=0.7)
+plt.title('Distribution of Task Durations (in minutes)', fontsize=14)
+plt.xlabel('Duration (minutes)', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.savefig('/mnt/data/Task_Durations_Histogram.png')  # Save as PNG
+
+# Save boxplot as an image
+plt.figure(figsize=(6, 8))
+plt.boxplot(df_cleaned_fixed['duration_in_mins'].dropna(), vert=False, patch_artist=True)
+plt.title('Boxplot of Task Durations (in minutes)', fontsize=14)
+plt.xlabel('Duration (minutes)', fontsize=12)
+plt.grid(axis='x', linestyle='--', alpha=0.7)
+plt.savefig('/mnt/data/Task_Durations_Boxplot.png')  # Save as PNG
+
+# Inform user where images are saved
+"Histogram and boxplot images have been saved successfully."
+
+
+
+def plot_activity_durations(df, activity_col='Activity name', duration_col='duration_in_mins', output_file=None):
+    """
+    Plots and optionally saves the average duration by activity name as a bar chart.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing the activity and duration data.
+    - activity_col (str): Column name for activity names.
+    - duration_col (str): Column name for durations in minutes.
+    - output_file (str, optional): Path to save the chart as an image file.
+    """
+    # Group by activity name and calculate the average duration
+    activity_avg_duration = df.groupby(activity_col)[duration_col].mean().sort_values()
+
+    # Plot the bar chart
+    plt.figure(figsize=(10, 6))
+    activity_avg_duration.plot(kind='barh', color='skyblue', edgecolor='k', alpha=0.8)
+    plt.title('Average Duration by Activity Name', fontsize=14)
+    plt.xlabel('Average Duration (minutes)', fontsize=12)
+    plt.ylabel('Activity Name', fontsize=12)
+    plt.grid(axis='x', linestyle='--', alpha=0.7)
+    
+    # Save the plot if an output file path is provided
+    if output_file:
+        plt.savefig(output_file, bbox_inches='tight')
+    
+    # Show the plot
+    plt.show()
+
+# Apply the function to plot and save the activity durations
+output_path = '/mnt/data/Average_Duration_by_Activity.png'
+plot_activity_durations(df_cleaned_fixed, activity_col='Activity name', duration_col='duration_in_mins', output_file=output_path)
+
+# Inform user where the image is saved
+f"Bar chart saved at: {output_path}"
+
+
+# Function to calculate and visualize average runtime per hour per pipeline
+def plot_avg_runtime_per_hour(df, pipeline_col='Pipeline name', run_start_col='Run start', duration_col='duration_in_mins', output_file=None):
+    """
+    Calculates and plots the average runtime for each pipeline per hour.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing pipeline data.
+    - pipeline_col (str): Column name for pipeline names.
+    - run_start_col (str): Column name for run start times (datetime-like).
+    - duration_col (str): Column name for durations in minutes.
+    - output_file (str, optional): Path to save the chart as an image file.
+    """
+    # Convert run start times to datetime if not already done
+    df[run_start_col] = pd.to_datetime(df[run_start_col], errors='coerce')
+
+    # Extract hour from the run start column
+    df['Hour'] = df[run_start_col].dt.hour
+
+    # Group by pipeline and hour, then calculate the average duration
+    avg_runtime = df.groupby([pipeline_col, 'Hour'])[duration_col].mean().unstack()
+
+    # Plot heatmap of average runtime
+    plt.figure(figsize=(12, 8))
+    plt.imshow(avg_runtime, cmap='Blues', aspect='auto')
+    plt.colorbar(label='Avg Runtime (mins)')
+    plt.title('Average Runtime per Hour per Pipeline', fontsize=14)
+    plt.xticks(ticks=range(avg_runtime.shape[1]), labels=avg_runtime.columns, fontsize=10)
+    plt.yticks(ticks=range(avg_runtime.shape[0]), labels=avg_runtime.index, fontsize=10)
+    plt.xlabel('Hour of Day', fontsize=12)
+    plt.ylabel('Pipeline Name', fontsize=12)
+    
+    # Save the plot if an output file path is provided
+    if output_file:
+        plt.savefig(output_file, bbox_inches='tight')
+    
+    # Show the plot
+    plt.show()
+
+
+# Applying the function
+output_path_avg_runtime = '/mnt/data/Avg_Runtime_Per_Hour_Per_Pipeline.png'
+plot_avg_runtime_per_hour(df_cleaned_fixed, pipeline_col='Pipeline name', run_start_col='Run start', duration_col='duration_in_mins', output_file=output_path_avg_runtime)
+
+# Additional Analysis Ideas
+# 1. **Trend of Task Start Times by Hour**:
+#    - Line plot showing the frequency of tasks starting per hour for each pipeline.
+# 2. **Success Rate by Hour or Activity**:
+#    - Calculate the success rate of tasks grouped by hour or activity name.
+# 3. **Duration Variability**:
+#    - Boxplot to show the spread of durations for each pipeline or activity.
+
+# Example for task start time frequency
+def plot_task_start_time_trends(df, pipeline_col='Pipeline name', run_start_col='Run start', output_file=None):
+    """
+    Plots the frequency of task start times by hour for each pipeline.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing the data.
+    - pipeline_col (str): Column name for pipeline names.
+    - run_start_col (str): Column name for run start times (datetime-like).
+    - output_file (str, optional): Path to save the chart as an image file.
+    """
+    # Extract hour from the run start column
+    df['Hour'] = pd.to_datetime(df[run_start_col], errors='coerce').dt.hour
+
+    # Group by pipeline and hour, and count occurrences
+    start_time_trends = df.groupby([pipeline_col, 'Hour']).size().unstack()
+
+    # Plot trends as a line chart
+    plt.figure(figsize=(12, 8))
+    for pipeline in start_time_trends.index:
+        plt.plot(start_time_trends.columns, start_time_trends.loc[pipeline], marker='o', label=pipeline)
+    
+    plt.title('Task Start Time Trends by Hour', fontsize=14)
+    plt.xlabel('Hour of Day', fontsize=12)
+    plt.ylabel('Number of Tasks', fontsize=12)
+    plt.legend(title='Pipeline', fontsize=10)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Save the plot if an output file path is provided
+    if output_file:
+        plt.savefig(output_file, bbox_inches='tight')
+    
+    # Show the plot
+    plt.show()
+
+
+# Applying the additional analysis function
+output_path_start_time_trends = '/mnt/data/Task_Start_Time_Trends.png'
+plot_task_start_time_trends(df_cleaned_fixed, pipeline_col='Pipeline name', run_start_col='Run start', output_file=output_path_start_time_trends)
+
+# Inform user where images are saved
+f"Charts saved at: {output_path_avg_runtime} and {output_path_start_time_trends}"
+
+
+
+####################################
+
+
+from datetime import timedelta
+
+# Function to calculate 'end_time' based on 'Run start' and 'Duration'
+def calculate_end_time(df, run_start_col='Run start', duration_col='Duration'):
+    """
+    Calculates the end time for each activity based on its start time and duration.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing the data.
+    - run_start_col (str): Column name for run start times (datetime-like).
+    - duration_col (str): Column name for durations in 'HH:MM:SS' or 'MM:SS' format.
+
+    Returns:
+    - pd.DataFrame: DataFrame with a new column 'End time' added.
+    """
+    def parse_duration(duration):
+        """Parses the duration and converts it into a timedelta object."""
+        if not isinstance(duration, str):
+            return timedelta(0)  # Default to zero duration for invalid entries
+        parts = list(map(int, duration.split(':')))
+        if len(parts) == 3:  # HH:MM:SS
+            return timedelta(hours=parts[0], minutes=parts[1], seconds=parts[2])
+        elif len(parts) == 2:  # MM:SS
+            return timedelta(minutes=parts[0], seconds=parts[1])
+        return timedelta(0)  # Default for invalid formats
+
+    # Ensure 'Run start' is datetime
+    df[run_start_col] = pd.to_datetime(df[run_start_col], errors='coerce')
+
+    # Calculate 'End time'
+    df['End time'] = df.apply(
+        lambda row: row[run_start_col] + parse_duration(row[duration_col]) if pd.notnull(row[run_start_col]) else None,
+        axis=1
+    )
+    
+    return df
+
+# Apply the function to calculate 'End time'
+df_with_end_time = calculate_end_time(df_cleaned_fixed, run_start_col='Run start', duration_col='Duration')
+
+# Display the updated DataFrame
+import ace_tools as tools; tools.display_dataframe_to_user(name="Pipeline Data with End Time", dataframe=df_with_end_time)
+
+
+#####################################
+
+def calculate_overlaps_dict(df, activity_col='Activity name', run_start_col='Run start', end_time_col='End time'):
+    """
+    Calculates overlaps for each hour and activity, and stores results in a dictionary.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing activity data.
+    - activity_col (str): Column name for activity names.
+    - run_start_col (str): Column name for activity start times.
+    - end_time_col (str): Column name for activity end times.
+
+    Returns:
+    - dict: Dictionary with hour and activity as keys, and overlap counts as values.
+    """
+    # Ensure necessary columns are present and not null
+    df = df.dropna(subset=[run_start_col, end_time_col])
+    df = df.copy()
+
+    # Extract the lowest start time
+    lowest_start_time = df[run_start_col].min()
+
+    # Add hour column based on the lowest start time
+    df['Hour'] = df[run_start_col].dt.floor('H')
+
+    # Initialize a dictionary to store overlaps
+    overlap_dict = {}
+
+    # Calculate overlaps for each hour and activity
+    for hour, group in df.groupby('Hour'):
+        for activity in group[activity_col].unique():
+            # Subset activities of the same type within the hour
+            current_group = group[group[activity_col] == activity]
+            overlap_count = 0
+
+            # Check overlaps for each activity
+            for _, row in current_group.iterrows():
+                overlapping = (
+                    (group[run_start_col] < row[end_time_col]) &
+                    (group[end_time_col] > row[run_start_col]) &
+                    (group[activity_col] == activity)
+                ).sum()
+                overlap_count += overlapping
+
+            # Store the result in the dictionary
+            overlap_dict[(hour, activity)] = overlap_count / len(current_group)  # Average overlaps
+
+    return overlap_dict
+
+
+# Calculate overlaps and store in a dictionary
+overlap_results = calculate_overlaps_dict(
+    df_with_end_time,
+    activity_col='Activity name',
+    run_start_col='Run start',
+    end_time_col='End time',
+)
+
+# Plotting overlaps
+def plot_overlaps(overlap_dict, output_file=None):
+    """
+    Plots overlaps stored in a dictionary.
+
+    Parameters:
+    - overlap_dict (dict): Dictionary with hour and activity as keys, and overlap counts as values.
+    - output_file (str, optional): Path to save the plot.
+    """
+    # Extract hours, activities, and overlaps
+    hours = sorted(set(key[0] for key in overlap_dict.keys()))
+    activities = sorted(set(key[1] for key in overlap_dict.keys()))
+    overlaps = {activity: [overlap_dict.get((hour, activity), 0) for hour in hours] for activity in activities}
+
+    # Create a bar plot for overlaps
+    plt.figure(figsize=(12, 8))
+    for activity, counts in overlaps.items():
+        plt.plot(hours, counts, marker='o', label=activity)
+
+    plt.title('Average Overlaps per Hour for Each Activity', fontsize=14)
+    plt.xlabel('Hour', fontsize=12)
+    plt.ylabel('Average Overlaps', fontsize=12)
+    plt.legend(title='Activity Name', fontsize=10)
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Save the plot if an output file is specified
+    if output_file:
+        plt.savefig(output_file, bbox_inches='tight')
+    
+    # Show the plot
+    plt.show()
+
+
+# Plot and save the overlaps
+output_path_plot = '/mnt/data/Average_Overlaps_Per_Hour.png'
+plot_overlaps(overlap_results, output_file=output_path_plot)
+
+# Inform user where the plot is saved
+f"Overlap plot saved at: {output_path_plot}"
