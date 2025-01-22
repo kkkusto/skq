@@ -1,154 +1,56 @@
-# Function to plot task duration distribution and boxplot for each pipeline
-def plot_durations_by_pipeline(df, pipeline_col='Pipeline name', duration_col='duration_in_mins', output_dir='/mnt/data/'):
-    """
-    Plots the distribution and boxplot of task durations for each pipeline.
+import os
+import pandas as pd
 
+# Function to add a 'duration_in_mins' column
+def add_duration_in_mins(df, duration_col='Duration'):
+    """
+    Adds a new column 'duration_in_mins' to the DataFrame, converting time duration into minutes.
+    
     Parameters:
-    - df (pd.DataFrame): DataFrame containing pipeline and task duration data.
-    - pipeline_col (str): Column name for pipeline names.
-    - duration_col (str): Column name for task durations in minutes.
-    - output_dir (str): Directory to save the plots.
-
+    - df (pd.DataFrame): Input DataFrame containing the duration column.
+    - duration_col (str): Name of the column with duration in 'HH:MM:SS' format.
+    
     Returns:
-    - None: Saves plots for each pipeline in the specified output directory.
+    - pd.DataFrame: DataFrame with the new column 'duration_in_mins'.
     """
-    pipelines = df[pipeline_col].unique()
+    def convert_to_minutes(duration):
+        # Handle edge cases for missing or malformed data
+        if not isinstance(duration, str):
+            return None
+        parts = duration.split(':')
+        if len(parts) == 3:  # HH:MM:SS
+            hours, minutes, seconds = map(int, parts)
+            return hours * 60 + minutes + seconds / 60
+        elif len(parts) == 2:  # MM:SS
+            minutes, seconds = map(int, parts)
+            return minutes + seconds / 60
+        return None  # Return None for invalid formats
 
-    for pipeline in pipelines:
-        # Filter data for the current pipeline
-        pipeline_data = df[df[pipeline_col] == pipeline]
+    df['duration_in_mins'] = df[duration_col].apply(convert_to_minutes)
+    return df
 
-        # Plot histogram for task durations
-        plt.figure(figsize=(10, 6))
-        plt.hist(pipeline_data[duration_col], bins=10, edgecolor='k', alpha=0.7)
-        plt.title(f'Distribution of Task Durations for {pipeline}', fontsize=14)
-        plt.xlabel('Duration (minutes)', fontsize=12)
-        plt.ylabel('Frequency', fontsize=12)
-        plt.grid(axis='y', linestyle='--', alpha=0.7)
-        histogram_path = f"{output_dir}Task_Duration_Distribution_{pipeline.replace(' ', '_')}.png"
-        plt.savefig(histogram_path, bbox_inches='tight')
-        plt.close()
+# Directory containing the files
+input_folder = 'path_to_your_folder'
+output_folder = 'path_to_output_folder'
+os.makedirs(output_folder, exist_ok=True)
 
-        # Plot boxplot for task durations
-        plt.figure(figsize=(6, 8))
-        plt.boxplot(pipeline_data[duration_col].dropna(), vert=False, patch_artist=True)
-        plt.title(f'Boxplot of Task Durations for {pipeline}', fontsize=14)
-        plt.xlabel('Duration (minutes)', fontsize=12)
-        plt.grid(axis='x', linestyle='--', alpha=0.7)
-        boxplot_path = f"{output_dir}Task_Duration_Boxplot_{pipeline.replace(' ', '_')}.png"
-        plt.savefig(boxplot_path, bbox_inches='tight')
-        plt.close()
-
-
-
-# Plot task durations by pipeline
-plot_durations_by_pipeline(sample_df_with_end_time, pipeline_col='Pipeline name', duration_col='duration_in_mins')
-
-
-
-# Function to calculate and plot average runtime per hour for each pipeline
-def plot_avg_runtime_per_hour_per_pipeline(df, pipeline_col='Pipeline name', run_start_col='Run start', duration_col='duration_in_mins', output_dir='/mnt/data/'):
-    """
-    Calculates and plots the average runtime per hour for each pipeline.
-
-    Parameters:
-    - df (pd.DataFrame): DataFrame containing pipeline data.
-    - pipeline_col (str): Column name for pipeline names.
-    - run_start_col (str): Column name for run start times (datetime-like).
-    - duration_col (str): Column name for durations in minutes.
-    - output_dir (str): Directory to save the plots.
-
-    Returns:
-    - None: Saves plots for each pipeline in the specified output directory.
-    """
-    # Ensure 'Run start' is datetime
-    df[run_start_col] = pd.to_datetime(df[run_start_col], errors='coerce')
-
-    # Extract hour from the run start column
-    df['Hour'] = df[run_start_col].dt.hour
-
-    # Unique pipelines
-    pipelines = df[pipeline_col].unique()
-
-    for pipeline in pipelines:
-        # Filter data for the current pipeline
-        pipeline_data = df[df[pipeline_col] == pipeline]
-
-        # Calculate average runtime per hour
-        avg_runtime_per_hour = pipeline_data.groupby('Hour')[duration_col].mean()
-
-        # Plot average runtime per hour
-        plt.figure(figsize=(10, 6))
-        avg_runtime_per_hour.plot(kind='bar', color='skyblue', edgecolor='k', alpha=0.8)
-        plt.title(f'Average Runtime per Hour for {pipeline}', fontsize=14)
-        plt.xlabel('Hour of Day', fontsize=12)
-        plt.ylabel('Average Runtime (minutes)', fontsize=12)
-        plt.grid(axis='y', linestyle='--', alpha=0.7)
-        plt.xticks(rotation=0)
-
-        # Save the plot
-        output_path = f"{output_dir}Avg_Runtime_Per_Hour_{pipeline.replace(' ', '_')}.png"
-        plt.savefig(output_path, bbox_inches='tight')
-        plt.close()
-
-# Apply the function to plot and save average runtime per hour for each pipeline
-plot_avg_runtime_per_hour_per_pipeline(sample_df_with_end_time, pipeline_col='Pipeline name', run_start_col='Run start', duration_col='duration_in_mins')
-
-
-
-# Function to calculate and plot average runtime per activity, per pipeline, per hour
-def plot_avg_runtime_per_activity_pipeline_hour(df, pipeline_col='Pipeline name', activity_col='Activity name', run_start_col='Run start', duration_col='duration_in_mins', output_dir='/mnt/data/'):
-    """
-    Calculates and plots the average runtime per activity, per pipeline, per hour.
-
-    Parameters:
-    - df (pd.DataFrame): DataFrame containing pipeline and activity data.
-    - pipeline_col (str): Column name for pipeline names.
-    - activity_col (str): Column name for activity names.
-    - run_start_col (str): Column name for run start times (datetime-like).
-    - duration_col (str): Column name for durations in minutes.
-    - output_dir (str): Directory to save the plots.
-
-    Returns:
-    - None: Saves plots for each pipeline in the specified output directory.
-    """
-    # Ensure 'Run start' is datetime
-    df[run_start_col] = pd.to_datetime(df[run_start_col], errors='coerce')
-
-    # Extract hour from the run start column
-    df['Hour'] = df[run_start_col].dt.hour
-
-    # Unique pipelines
-    pipelines = df[pipeline_col].unique()
-
-    for pipeline in pipelines:
-        # Filter data for the current pipeline
-        pipeline_data = df[df[pipeline_col] == pipeline]
-
-        # Calculate average runtime per activity per hour
-        avg_runtime = pipeline_data.groupby(['Hour', activity_col])[duration_col].mean().unstack()
-
-        # Plot average runtime per activity per hour
-        plt.figure(figsize=(12, 8))
-        avg_runtime.plot(kind='bar', stacked=True, colormap='viridis', edgecolor='k', alpha=0.8)
-        plt.title(f'Average Runtime per Activity per Hour for {pipeline}', fontsize=14)
-        plt.xlabel('Hour of Day', fontsize=12)
-        plt.ylabel('Average Runtime (minutes)', fontsize=12)
-        plt.legend(title='Activity Name', fontsize=10)
-        plt.grid(axis='y', linestyle='--', alpha=0.7)
-
-        # Save the plot
-        output_path = f"{output_dir}Avg_Runtime_Per_Activity_Per_Hour_{pipeline.replace(' ', '_')}.png"
-        plt.savefig(output_path, bbox_inches='tight')
-        plt.close()
-
-# Apply the function to plot and save average runtime per activity, per pipeline, per hour
-plot_avg_runtime_per_activity_pipeline_hour(
-    sample_df_with_end_time,
-    pipeline_col='Pipeline name',
-    activity_col='Activity name',
-    run_start_col='Run start',
-    duration_col='duration_in_mins'
-)
-
-
+# Iterate over all files in the input folder
+for file_name in os.listdir(input_folder):
+    if file_name.endswith('.csv'):  # Process only CSV files
+        file_path = os.path.join(input_folder, file_name)
+        
+        try:
+            # Read the CSV file into a DataFrame
+            df = pd.read_csv(file_path)
+            
+            # Apply the duration conversion function
+            df_modified = add_duration_in_mins(df, duration_col='Duration')
+            
+            # Generate the new file name and save the modified DataFrame
+            modified_file_name = f"{os.path.splitext(file_name)[0]}_modified_30.csv"
+            output_path = os.path.join(output_folder, modified_file_name)
+            df_modified.to_csv(output_path, index=False)
+            
+            print(f"Processed and saved: {output_path}")
+        except Exception as e:
+            print(f"Error processing {file_name}: {e}")
