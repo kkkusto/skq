@@ -1,5 +1,12 @@
-let
-    PreviousStep = <LastStepName>,
-    RemoveEmptyColumns = Table.SelectColumns(PreviousStep, List.Select(Table.ColumnNames(PreviousStep), (col) => List.NonNullCount(Table.Column(PreviousStep, col)) > 0))
-in
-    RemoveEmptyColumns
+import pandas as pd
+
+# Load your data into a DataFrame (replace 'input_file.csv' with your file path)
+df = pd.read_csv('input_file.csv')
+
+# Remove empty columns (columns with all NaN values)
+df_cleaned = df.dropna(axis=1, how='all')
+
+# Save the cleaned DataFrame to a new file (replace 'output_file.csv' with your desired output path)
+df_cleaned.to_csv('output_file.csv', index=False)
+
+print("Empty columns removed and cleaned file saved as 'output_file.csv'.")
