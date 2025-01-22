@@ -94,6 +94,61 @@ def plot_avg_runtime_per_hour_per_pipeline(df, pipeline_col='Pipeline name', run
 # Apply the function to plot and save average runtime per hour for each pipeline
 plot_avg_runtime_per_hour_per_pipeline(sample_df_with_end_time, pipeline_col='Pipeline name', run_start_col='Run start', duration_col='duration_in_mins')
 
-# Inform the user about saved images
-"Average runtime per hour images have been saved for each pipeline in the specified directory."
+
+
+# Function to calculate and plot average runtime per activity, per pipeline, per hour
+def plot_avg_runtime_per_activity_pipeline_hour(df, pipeline_col='Pipeline name', activity_col='Activity name', run_start_col='Run start', duration_col='duration_in_mins', output_dir='/mnt/data/'):
+    """
+    Calculates and plots the average runtime per activity, per pipeline, per hour.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing pipeline and activity data.
+    - pipeline_col (str): Column name for pipeline names.
+    - activity_col (str): Column name for activity names.
+    - run_start_col (str): Column name for run start times (datetime-like).
+    - duration_col (str): Column name for durations in minutes.
+    - output_dir (str): Directory to save the plots.
+
+    Returns:
+    - None: Saves plots for each pipeline in the specified output directory.
+    """
+    # Ensure 'Run start' is datetime
+    df[run_start_col] = pd.to_datetime(df[run_start_col], errors='coerce')
+
+    # Extract hour from the run start column
+    df['Hour'] = df[run_start_col].dt.hour
+
+    # Unique pipelines
+    pipelines = df[pipeline_col].unique()
+
+    for pipeline in pipelines:
+        # Filter data for the current pipeline
+        pipeline_data = df[df[pipeline_col] == pipeline]
+
+        # Calculate average runtime per activity per hour
+        avg_runtime = pipeline_data.groupby(['Hour', activity_col])[duration_col].mean().unstack()
+
+        # Plot average runtime per activity per hour
+        plt.figure(figsize=(12, 8))
+        avg_runtime.plot(kind='bar', stacked=True, colormap='viridis', edgecolor='k', alpha=0.8)
+        plt.title(f'Average Runtime per Activity per Hour for {pipeline}', fontsize=14)
+        plt.xlabel('Hour of Day', fontsize=12)
+        plt.ylabel('Average Runtime (minutes)', fontsize=12)
+        plt.legend(title='Activity Name', fontsize=10)
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+        # Save the plot
+        output_path = f"{output_dir}Avg_Runtime_Per_Activity_Per_Hour_{pipeline.replace(' ', '_')}.png"
+        plt.savefig(output_path, bbox_inches='tight')
+        plt.close()
+
+# Apply the function to plot and save average runtime per activity, per pipeline, per hour
+plot_avg_runtime_per_activity_pipeline_hour(
+    sample_df_with_end_time,
+    pipeline_col='Pipeline name',
+    activity_col='Activity name',
+    run_start_col='Run start',
+    duration_col='duration_in_mins'
+)
+
 
