@@ -1,43 +1,51 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
+def get_hourly_overlapping_activities(df):
+    """
+    This function calculates overlapping activities for each run hour.
+    It returns a DataFrame with each run hour and overlapping activities for that hour.
+    """
+    # Expand rows to cover each hour between start and end time
+    expanded_rows = []
+    for _, row in df.iterrows():
+        current_start = row["Run Start"]
+        current_end = row["End Time"]
+        activity_name = row["Activity Name"]
+        
+        # Generate hourly ranges
+        hourly_range = pd.date_range(current_start.floor("H"), current_end.ceil("H"), freq="H")
+        for hour in hourly_range:
+            expanded_rows.append({"Run Hour": hour, "Activity Name": activity_name, "Original Start": current_start, "Original End": current_end})
+    
+    # Create expanded DataFrame
+    expanded_df = pd.DataFrame(expanded_rows)
 
-# Example data
-data = {
-    "Activity Name": ["Task A", "Task B", "Task C", "Task D", "Task E"],
-    "Run Start": ["2025-01-22 08:00", "2025-01-22 09:30", "2025-01-22 11:00", "2025-01-22 12:00", "2025-01-22 14:00"],
-    "End Time": ["2025-01-22 09:00", "2025-01-22 10:30", "2025-01-22 12:30", "2025-01-22 13:30", "2025-01-22 15:00"],
+    # Group by run hour and find overlaps
+    result = []
+    for hour, group in expanded_df.groupby("Run Hour"):
+        activities = group["Activity Name"].tolist()
+        overlaps = {activity: [a for a in activities if a != activity and
+                               group[group["Activity Name"] == a]["Original Start"].iloc[0] < group[group["Activity Name"] == activity]["Original End"].iloc[0] and
+                               group[group["Activity Name"] == a]["Original End"].iloc[0] > group[group["Activity Name"] == activity]["Original Start"].iloc[0]]
+                    for activity in activities}
+        for activity, overlap_list in overlaps.items():
+            result.append({"Run Hour": hour, "Activity Name": activity, "Overlapping Activities": overlap_list})
+
+    return pd.DataFrame(result)
+
+
+# Example data for the described scenario
+data_example = {
+    "Activity Name": ["A", "B", "C", "D"],
+    "Run Start": ["2025-01-22 08:30", "2025-01-22 08:39", "2025-01-22 09:20", "2025-01-22 10:00"],
+    "End Time": ["2025-01-22 09:30", "2025-01-22 09:40", "2025-01-22 10:10", "2025-01-22 11:00"],
 }
 
 # Convert to DataFrame
-df = pd.DataFrame(data)
-df["Run Start"] = pd.to_datetime(df["Run Start"])
-df["End Time"] = pd.to_datetime(df["End Time"])
-df["Duration (mins)"] = (df["End Time"] - df["Run Start"]).dt.total_seconds() / 60
+df_example = pd.DataFrame(data_example)
+df_example["Run Start"] = pd.to_datetime(df_example["Run Start"])
+df_example["End Time"] = pd.to_datetime(df_example["End Time"])
 
-# Plot Gantt chart
-plt.figure(figsize=(10, 6))
-sns.set(style="whitegrid")
+# Get hourly overlapping activities
+hourly_overlaps_df = get_hourly_overlapping_activities(df_example)
 
-# Create a bar plot
-sns.barplot(
-    x="Duration (mins)",
-    y="Activity Name",
-    data=df,
-    hue="Activity Name",
-    dodge=False,
-    palette="viridis",
-    orient="h"
-)
-
-# Customize the plot
-plt.title("Gantt Chart of Activities")
-plt.xlabel("Duration (Minutes)")
-plt.ylabel("Activity Name")
-plt.legend(title="Activity Name", bbox_to_anchor=(1.05, 1), loc="upper left")
-
-# Enable scrollable x-axis
-plt.gca().set_xlim(left=0, right=df["Duration (mins)"].max() + 10)
-plt.xticks(rotation=45)
-plt.tight_layout()
-plt.show()
+# Display the result
+import ace_tools as tools; tools.display_dataframe_to_user(name="Hourly Overlapping Activities", dataframe=hourly_overlaps_df)
