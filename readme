@@ -1,12 +1,43 @@
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Load your data into a DataFrame (replace 'input_file.csv' with your file path)
-df = pd.read_csv('input_file.csv')
+# Example data
+data = {
+    "Activity Name": ["Task A", "Task B", "Task C", "Task D", "Task E"],
+    "Run Start": ["2025-01-22 08:00", "2025-01-22 09:30", "2025-01-22 11:00", "2025-01-22 12:00", "2025-01-22 14:00"],
+    "End Time": ["2025-01-22 09:00", "2025-01-22 10:30", "2025-01-22 12:30", "2025-01-22 13:30", "2025-01-22 15:00"],
+}
 
-# Remove empty columns (columns with all NaN values)
-df_cleaned = df.dropna(axis=1, how='all')
+# Convert to DataFrame
+df = pd.DataFrame(data)
+df["Run Start"] = pd.to_datetime(df["Run Start"])
+df["End Time"] = pd.to_datetime(df["End Time"])
+df["Duration (mins)"] = (df["End Time"] - df["Run Start"]).dt.total_seconds() / 60
 
-# Save the cleaned DataFrame to a new file (replace 'output_file.csv' with your desired output path)
-df_cleaned.to_csv('output_file.csv', index=False)
+# Plot Gantt chart
+plt.figure(figsize=(10, 6))
+sns.set(style="whitegrid")
 
-print("Empty columns removed and cleaned file saved as 'output_file.csv'.")
+# Create a bar plot
+sns.barplot(
+    x="Duration (mins)",
+    y="Activity Name",
+    data=df,
+    hue="Activity Name",
+    dodge=False,
+    palette="viridis",
+    orient="h"
+)
+
+# Customize the plot
+plt.title("Gantt Chart of Activities")
+plt.xlabel("Duration (Minutes)")
+plt.ylabel("Activity Name")
+plt.legend(title="Activity Name", bbox_to_anchor=(1.05, 1), loc="upper left")
+
+# Enable scrollable x-axis
+plt.gca().set_xlim(left=0, right=df["Duration (mins)"].max() + 10)
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
