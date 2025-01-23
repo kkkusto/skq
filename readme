@@ -49,3 +49,44 @@ hourly_overlaps_df = get_hourly_overlapping_activities(df_example)
 
 # Display the result
 import ace_tools as tools; tools.display_dataframe_to_user(name="Hourly Overlapping Activities", dataframe=hourly_overlaps_df)
+
+
+import plotly.express as px
+import pandas as pd
+
+# Example data
+data = {
+    "Activity Name": ["Task A", "Task B", "Task C", "Task D", "Task E"],
+    "Run Start": ["2025-01-22 08:00", "2025-01-22 09:30", "2025-01-22 11:00", "2025-01-22 12:00", "2025-01-22 14:00"],
+    "End Time": ["2025-01-22 09:00", "2025-01-22 10:30", "2025-01-22 12:30", "2025-01-22 13:30", "2025-01-22 15:00"],
+}
+
+# Convert to DataFrame
+df = pd.DataFrame(data)
+df["Run Start"] = pd.to_datetime(df["Run Start"])
+df["End Time"] = pd.to_datetime(df["End Time"])
+df["Duration"] = (df["End Time"] - df["Run Start"]).dt.total_seconds() / 60
+
+# Create Gantt chart using Plotly
+fig = px.timeline(
+    df,
+    x_start="Run Start",
+    x_end="End Time",
+    y="Activity Name",
+    color="Activity Name",
+    title="Scrollable Gantt Chart",
+    labels={"Activity Name": "Activity"},
+)
+
+# Update layout to enable scrolling
+fig.update_layout(
+    xaxis=dict(
+        rangeslider=dict(visible=True),  # Enable the range slider for horizontal scrolling
+        showgrid=True
+    ),
+    height=400,  # Adjust height for better readability
+)
+
+# Show the chart
+fig.show()
+
