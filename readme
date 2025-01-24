@@ -1,7 +1,14 @@
+WITH MonthlyCounts AS (
+    SELECT
+        FORMAT(row_insert_time, 'yyyy-MM') MonthYear,
+        COUNT(*) RowCount
+    FROM your_table_name
+    WHERE row_insert_time >= DATEADD(YEAR, -5, GETDATE())
+    GROUP BY FORMAT(row_insert_time, 'yyyy-MM')
+)
 SELECT
-    FORMAT(row_insert_time, 'yyyy-MM') AS MonthYear,
-    COUNT(*) AS RowCount
-FROM your_table_name
-WHERE row_insert_time >= DATEADD(YEAR, -5, GETDATE())
-GROUP BY FORMAT(row_insert_time, 'yyyy-MM')
+    MonthYear,
+    RowCount,
+    SUM(RowCount) OVER (ORDER BY MonthYear) CumulativeRowCount
+FROM MonthlyCounts
 ORDER BY MonthYear;
