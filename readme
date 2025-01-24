@@ -1,4 +1,7 @@
-Distribution Type,Description,Example,Use Case
-Hash Distribution,"Data is distributed based on the hash value of a key column.","Orders are distributed by CustomerID, ensuring rows with the same customer go to the same node.","Evenly spreads data and is efficient for joins on the distribution key."
-Round-Robin Distribution,"Rows are distributed evenly but without any specific order or pattern.",N/A,"Simple to implement but less efficient for joins."
-Replicated Distribution,"The table is fully replicated across all nodes.",N/A,"Small tables that are frequently used in joins benefit from replication for faster access."
+SELECT
+    FORMAT(row_insert_time, 'yyyy-MM') AS MonthYear,
+    COUNT(*) AS RowCount
+FROM your_table_name
+WHERE row_insert_time >= DATEADD(YEAR, -5, GETDATE())
+GROUP BY FORMAT(row_insert_time, 'yyyy-MM')
+ORDER BY MonthYear;
