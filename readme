@@ -1,30 +1,77 @@
-SELECT 
-    r.request_id,
-    r.status AS query_status,
-    r.sql_text,
-    r.total_elapsed_time AS query_time_ms,
-    s.user_name,
-    s.session_id,
-    w.wait_type,
-    w.wait_duration_ms
-FROM sys.dm_pdw_exec_requests r
-LEFT JOIN sys.dm_pdw_exec_sessions s ON r.session_id = s.session_id
-LEFT JOIN sys.dm_pdw_waits w ON r.request_id = w.request_id
-WHERE r.status IN ('Running', 'Suspended', 'Completed')
-ORDER BY r.submit_time DESC;
+import plotly.graph_objects as go
+
+# Initialize a Plotly figure for testing
+fig = go.Figure()
+
+# Mock data from previously created test files
+test_data = {
+    "updated_test1.csv": pd.DataFrame({
+        "month_yr": ["2020-11", "2020-12", "2021-01"],
+        "row_count_per_month": [120, 130, 150],
+        "cumulative_count": [120, 250, 400]
+    }),
+    "updated_test2.csv": pd.DataFrame({
+        "month_yr": ["2020-09", "2020-10", "2020-11"],
+        "row_count_per_month": [90, 110, 120],
+        "cumulative_count": [90, 200, 320]
+    }),
+}
+
+# Add traces for each test dataset
+for file_name, df in test_data.items():
+    fig.add_trace(go.Scatter(x=df["month_yr"], y=df["cumulative_count"], mode="lines+markers", name=file_name))
+
+# Update the layout of the figure
+fig.update_layout(
+    title="Cumulative Counts Across Test Files",
+    xaxis_title="Month-Year",
+    yaxis_title="Cumulative Count",
+    legend_title="File Name",
+    template="plotly"
+)
+
+# Show the figure
+fig.show()
 
 
-SELECT 
-    r.request_id,
-    r.sql_text,
-    r.status AS query_status,
-    r.total_elapsed_time AS query_duration,
-    s.user_name,
-    s.session_id,
-    w.wait_type,
-    w.wait_duration_ms
-FROM sys.dm_pdw_exec_requests r
-LEFT JOIN sys.dm_pdw_exec_sessions s ON r.session_id = s.session_id
-LEFT JOIN sys.dm_pdw_waits w ON r.request_id = w.request_id
-WHERE r.status IN ('Running', 'Completed')
-ORDER BY r.submit_time DESC;
+import os
+import pandas as pd
+import plotly.graph_objects as go
+
+# Specify the folder containing the CSV files
+folder_path = 'path_to_your_folder'
+
+# Initialize a Plotly figure
+fig = go.Figure()
+
+# Process each CSV file in the folder
+for file_name in os.listdir(folder_path):
+    if file_name.endswith('.csv'):
+        file_path = os.path.join(folder_path, file_name)
+
+        # Read the CSV file without headers
+        df = pd.read_csv(file_path, header=None, names=['month_yr', 'row_count_per_month'])
+
+        # Add the third column based on the cumulative sum of the second column
+        df['cumulative_count'] = df['row_count_per_month'].cumsum()
+
+        # Add a trace to the plot for this file
+        fig.add_trace(go.Scatter(x=df['month_yr'], y=df['cumulative_count'], mode='lines+markers', name=file_name))
+
+        # Save the updated DataFrame back to a new file or overwrite
+        output_file_path = os.path.join(folder_path, f'updated_{file_name}')
+        df.to_csv(output_file_path, index=False)
+
+        print(f"Processed file: {file_name}, saved as: updated_{file_name}")
+
+# Update the layout of the figure
+fig.update_layout(
+    title="Cumulative Counts Across Files",
+    xaxis_title="Month-Year",
+    yaxis_title="Cumulative Count",
+    legend_title="File Name",
+    template="plotly"
+)
+
+# Show the figure
+fig.show()
