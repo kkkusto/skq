@@ -30,6 +30,10 @@ for file_name in os.listdir(folder_path):
 
         print(f"Processed file: {file_name}, saved as: updated_{file_name}")
 
+# Ensure all_data has unique combinations of month_yr and file_name for plotting
+all_data['month_yr'] = pd.to_datetime(all_data['month_yr'])  # Convert to datetime for proper sorting
+all_data.sort_values(by=['month_yr', 'file_name'], inplace=True)
+
 # Plot the data using seaborn
 plt.figure(figsize=(12, 6))
 sns.lineplot(data=all_data, x='month_yr', y='cumulative_count', hue='file_name', marker='o')
