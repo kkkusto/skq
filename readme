@@ -1,51 +1,30 @@
-let
-    // Step 1: Define the second query to get session IDs
-    session_data = [
-        session_id = {"Session1", "Session2", "Session3"} // Example session IDs
-    ],
-    session_ids = try session_data[session_id] otherwise {},
+SELECT 
+    r.request_id,
+    r.status AS query_status,
+    r.sql_text,
+    r.total_elapsed_time AS query_time_ms,
+    s.user_name,
+    s.session_id,
+    w.wait_type,
+    w.wait_duration_ms
+FROM sys.dm_pdw_exec_requests r
+LEFT JOIN sys.dm_pdw_exec_sessions s ON r.session_id = s.session_id
+LEFT JOIN sys.dm_pdw_waits w ON r.request_id = w.request_id
+WHERE r.status IN ('Running', 'Suspended', 'Completed')
+ORDER BY r.submit_time DESC;
 
-    // Step 2: Convert session IDs into a comma-separated list for the query
-    session_ids_text = Text.Combine(List.Transform(session_ids, each """" & _ & """"), ","),
-    
-    // Step 3: Define the first query with the merged session IDs
-    AnalyticsQuery = Json.Document(Web.Contents(
-        "https://api.loganalytics.io/v1/prod/query",
-        [
-            Query=[
-                #"query"="AzureDiagnostics
-                          | where Category contains ""ExecRequests""
-                          | where SessionId_s IN (" & session_ids_text & ")"
-            ],
-            #"x-ms-app"="AzureFirstPBI",
-            #"timespan"="P2D", // Past 2 days
-            #"scope"="hierarchy",
-            #"prefer"="ai.response-thinning=true",
-            Timeout=#duration(0,0,4,0)
-        ]
-    )),
 
-    // Step 4: Define the type map
-    TypeMap = #table(
-        { "AnalyticsTypes", "Type" },
-        {
-            { "string", Text.Type },
-            { "int", Int32.Type },
-            { "long", Int64.Type },
-            { "real", Double.Type },
-            { "timespan", Duration.Type },
-            { "datetime", DateTimeZone.Type },
-            { "bool", Logical.Type },
-            { "guid", Text.Type },
-            { "dynamic", Text.Type }
-        }
-    ),
-
-    // Step 5: Parse the data table
-    DataTable = AnalyticsQuery[tables]{0},
-    Columns = Table.FromRecords(DataTable[columns]),
-    ColumnsWithType = Table.Join(Columns, {"type"}, TypeMap, {"AnalyticsTypes"}),
-    Rows = Table.FromRows(DataTable[rows], Columns[Name]),
-    Table = Table.TransformColumnTypes(Rows, Table.ToList(ColumnsWithType, (c) => { c{0}, c{3} }))
-in
-    Table
+SELECT 
+    r.request_id,
+    r.sql_text,
+    r.status AS query_status,
+    r.total_elapsed_time AS query_duration,
+    s.user_name,
+    s.session_id,
+    w.wait_type,
+    w.wait_duration_ms
+FROM sys.dm_pdw_exec_requests r
+LEFT JOIN sys.dm_pdw_exec_sessions s ON r.session_id = s.session_id
+LEFT JOIN sys.dm_pdw_waits w ON r.request_id = w.request_id
+WHERE r.status IN ('Running', 'Completed')
+ORDER BY r.submit_time DESC;
