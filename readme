@@ -1,48 +1,13 @@
-import plotly.graph_objects as go
-
-# Initialize a Plotly figure for testing
-fig = go.Figure()
-
-# Mock data from previously created test files
-test_data = {
-    "updated_test1.csv": pd.DataFrame({
-        "month_yr": ["2020-11", "2020-12", "2021-01"],
-        "row_count_per_month": [120, 130, 150],
-        "cumulative_count": [120, 250, 400]
-    }),
-    "updated_test2.csv": pd.DataFrame({
-        "month_yr": ["2020-09", "2020-10", "2020-11"],
-        "row_count_per_month": [90, 110, 120],
-        "cumulative_count": [90, 200, 320]
-    }),
-}
-
-# Add traces for each test dataset
-for file_name, df in test_data.items():
-    fig.add_trace(go.Scatter(x=df["month_yr"], y=df["cumulative_count"], mode="lines+markers", name=file_name))
-
-# Update the layout of the figure
-fig.update_layout(
-    title="Cumulative Counts Across Test Files",
-    xaxis_title="Month-Year",
-    yaxis_title="Cumulative Count",
-    legend_title="File Name",
-    template="plotly"
-)
-
-# Show the figure
-fig.show()
-
-
 import os
 import pandas as pd
-import plotly.graph_objects as go
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Specify the folder containing the CSV files
 folder_path = 'path_to_your_folder'
 
-# Initialize a Plotly figure
-fig = go.Figure()
+# Initialize a DataFrame to store cumulative counts across files
+all_data = pd.DataFrame()
 
 # Process each CSV file in the folder
 for file_name in os.listdir(folder_path):
@@ -54,9 +19,10 @@ for file_name in os.listdir(folder_path):
 
         # Add the third column based on the cumulative sum of the second column
         df['cumulative_count'] = df['row_count_per_month'].cumsum()
+        df['file_name'] = file_name  # Add a column to indicate the file name
 
-        # Add a trace to the plot for this file
-        fig.add_trace(go.Scatter(x=df['month_yr'], y=df['cumulative_count'], mode='lines+markers', name=file_name))
+        # Append the data to the consolidated DataFrame
+        all_data = pd.concat([all_data, df], ignore_index=True)
 
         # Save the updated DataFrame back to a new file or overwrite
         output_file_path = os.path.join(folder_path, f'updated_{file_name}')
@@ -64,14 +30,17 @@ for file_name in os.listdir(folder_path):
 
         print(f"Processed file: {file_name}, saved as: updated_{file_name}")
 
-# Update the layout of the figure
-fig.update_layout(
-    title="Cumulative Counts Across Files",
-    xaxis_title="Month-Year",
-    yaxis_title="Cumulative Count",
-    legend_title="File Name",
-    template="plotly"
-)
+# Plot the data using seaborn
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=all_data, x='month_yr', y='cumulative_count', hue='file_name', marker='o')
 
-# Show the figure
-fig.show()
+# Customize the plot
+plt.title("Cumulative Counts Across Files", fontsize=16)
+plt.xlabel("Month-Year", fontsize=12)
+plt.ylabel("Cumulative Count", fontsize=12)
+plt.legend(title="File Name")
+plt.xticks(rotation=45)
+plt.tight_layout()
+
+# Show the plot
+plt.show()
